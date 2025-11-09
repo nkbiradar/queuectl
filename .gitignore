@@ -1,0 +1,17 @@
+# Node
+node_modules/
+
+# DB and backups
+data/*.db
+data/backup/
+
+# Environment
+.env
+
+# Build / coverage
+dist/
+build/
+coverage/
+
+# OS
+.DS_Store

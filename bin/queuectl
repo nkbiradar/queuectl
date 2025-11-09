@@ -1,0 +1,162 @@
+#!/usr/bin/env node
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const { program } = require('commander');
+const { v4: uuidv4 } = require('uuid');
+
+// job model functions
+const jobModel = require('../src/jobModel');
+const { insertJob, listJobs, retryDeadJob, claimPendingJob } = jobModel;
+
+// config helpers
+const configModule = require('../src/config');
+const loadConfig = configModule.loadConfig;
+const setConfigKey = configModule.setConfigKey;
+
+// Worker class
+const Worker = require('../src/worker');
+
+program
+  .name('queuectl')
+  .description('CLI for the QueueCTL job system')
+  .version('1.0.0');
+
+// ENQUEUE: support JSON string, file, or piped stdin ('-')
+program
+  .command('enqueue [jsonOrDash]')
+  .description('Add a new job. JSON string, --file <path>, or pipe JSON and pass "-"')
+  .option('--file <path>', 'read JSON from file')
+  .action(async (jsonOrDash, opts) => {
+    try {
+      let raw = null;
+
+      if (opts.file) {
+        raw = fs.readFileSync(opts.file, 'utf8');
+      } else if (jsonOrDash === '-' || (!jsonOrDash && !process.stdin.isTTY)) {
+        // read from stdin
+        raw = await new Promise((res, rej) => {
+          let data = '';
+          process.stdin.setEncoding('utf8');
+          process.stdin.on('data', chunk => data += chunk);
+          process.stdin.on('end', () => res(data));
+          process.stdin.on('error', err => rej(err));
+        });
+      } else if (jsonOrDash) {
+        raw = jsonOrDash;
+      } else {
+        throw new Error('No job JSON provided. Use JSON string, --file, or pipe JSON and pass "-"');
+      }
+
+      raw = raw.trim();
+      if (!raw) throw new Error('Empty JSON input');
+
+      const data = JSON.parse(raw);
+      if (!data.command) throw new Error('job JSON must include "command"');
+
+      const cfg = loadConfig();
+      const job = {
+        id: data.id || uuidv4(),
+        command: data.command,
+        state: 'pending',
+        attempts: 0,
+        max_retries: data.max_retries != null ? data.max_retries : cfg.max_retries,
+        base_backoff: data.base_backoff != null ? data.base_backoff : cfg.base_backoff,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      insertJob(job);
+      console.log(`✅ Job enqueued: ${job.id}`);
+    } catch (e) {
+      console.error('❌ Failed to enqueue job:', e.message);
+      process.exitCode = 2;
+    }
+  });
+
+// LIST
+program
+  .command('list')
+  .description('List jobs (optionally by state)')
+  .option('--state <state>', 'Filter by state')
+  .action((opts) => {
+    try {
+      const jobs = listJobs(opts.state);
+      if (!jobs || jobs.length === 0) return console.log('No jobs found.');
+      for (const j of jobs) {
+        console.log(`${j.id.padEnd(24)} | ${String(j.state).padEnd(10)} | attempts=${j.attempts} | ${j.command}`);
+      }
+    } catch (e) {
+      console.error('❌ list failed:', e.message);
+      process.exitCode = 2;
+    }
+  });
+
+// DLQ: list or retry
+program
+  .command('dlq')
+  .description('Show dead-letter jobs or retry one')
+  .option('--retry <id>', 'Retry a specific dead job')
+  .action((opts) => {
+    try {
+      if (opts.retry) {
+        retryDeadJob(opts.retry);
+        console.log(`♻️  Retried job ${opts.retry}`);
+        return;
+      }
+      const jobs = listJobs('dead');
+      if (!jobs || jobs.length === 0) return console.log('No dead jobs.');
+      for (const j of jobs) {
+        console.log(`${j.id.padEnd(24)} | attempts=${j.attempts} | last_error=${j.last_error || ''}`);
+      }
+    } catch (e) {
+      console.error('❌ dlq failed:', e.message);
+      process.exitCode = 2;
+    }
+  });
+
+// WORKER: start worker(s)
+program
+  .command('worker')
+  .description('Start worker(s) to process jobs')
+  .option('--count <n>', 'Number of workers to start', '1')
+  .action((opts) => {
+    const count = Number(opts.count) || 1;
+    console.log(`👷 Starting ${count} worker(s)...`);
+    for (let i = 0; i < count; i++) {
+      const worker = new Worker(`worker-${Date.now()}-${i}`);
+      worker.attachClaimFn(claimPendingJob);
+      // do not await; run in background
+      worker.start().catch(err => console.error('Worker crashed:', err));
+    }
+  });
+
+// CONFIG: get / set
+program
+  .command('config')
+  .description('Manage configuration (get or set a key)')
+  .option('--get', 'Show current configuration')
+  .option('--set <key> <value...>', 'Set configuration key to value')
+  .action((opts, command) => {
+    try {
+      if (opts.get) {
+        const cfg = loadConfig();
+        console.log(cfg);
+        return;
+      }
+      // support: queuectl config --set key value   OR queuectl config --set key "complex value"
+      if (opts.set) {
+        const [key, ...rest] = opts.set;
+        const value = rest.length === 0 ? '' : rest.join(' ');
+        setConfigKey(key, value);
+        return;
+      }
+      console.log('Usage: queuectl config --get   OR   queuectl config --set <key> <value>');
+    } catch (e) {
+      console.error('❌ config failed:', e.message);
+      process.exitCode = 2;
+    }
+  });
+
+program.parse(process.argv);

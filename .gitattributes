@@ -1,0 +1,17 @@
+# Set default behavior to normalize line endings
+* text=auto
+
+# Force LF for most text files (keeps repo consistent across platforms)
+*.js   text eol=lf
+*.ts   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.sh   text eol=lf
+*.py   text eol=lf
+
+# Binary files (do not modify)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.zip binary
