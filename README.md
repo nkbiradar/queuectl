@@ -1,184 +1,53 @@
-1) Setup Instructions — Run Locally
-Prerequisites
+# QueueCTL - Distributed Job Queue System
 
-Node.js ≥ 14
+![QueueCTL](https://img.shields.io/badge/QueueCTL-v1.0.0-blue)
+![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A514-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
 
-npm or yarn
+A lightweight, persistent job queue system with SQLite backend, built for simplicity and control. Execute shell commands asynchronously with automatic retries, dead letter queue management, and real-time monitoring.
 
-Clone and Install
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Installation](#-installation)
+- [Usage](#-usage)
+  - [CLI Commands](#cli-commands)
+  - [REST API](#rest-api)
+- [Architecture](#-architecture)
+- [Configuration](#-configuration)
+- [Testing](#-testing)
+- [Troubleshooting](#-troubleshooting)
+- [Development](#-development)
+- [License](#-license)
+
+## ✨ Features
+
+- **📦 Persistent Job Queue** - SQLite-backed storage with ACID properties
+- **🔄 Automatic Retries** - Exponential backoff with configurable retry policies
+- **💀 Dead Letter Queue** - Automatic handling of failed jobs with manual retry capability
+- **🌐 Cross-Platform** - Works on Windows, macOS, and Linux
+- **🔌 REST API** - Full HTTP API for integration and monitoring
+- **📊 Real-time Monitoring** - Track job status, output, and execution metrics
+- **⌨️ Simple CLI** - Intuitive command-line interface for job management
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js ≥ 14
+- npm or yarn
+
+### Installation
+
+```bash
+# Clone the repository
 git clone https://github.com/nkbiradar/queuectl.git
 cd queuectl
+
+# Install dependencies
 npm install
 
-
-💡 On first run, the app automatically creates data/queue.db and applies migrations from migrations/init.sql.
-
-Start the HTTP Server
+# Start the server (creates database automatically)
 node src/index.js
-
-
-✅ Starts the HTTP API and 1 worker by default.
-
-Notes
-
-Database file: data/queue.db
-
-Migrations: migrations/init.sql
-
-💻 2) Usage Examples — CLI and API
-Enqueue a Job
-
-PowerShell (Recommended)
-
-$job = @{ command = 'echo Hello from PowerShell' }
-$job | ConvertTo-Json | Out-File -Encoding UTF8 job.json
-npx queuectl enqueue --file job.json
-Remove-Item job.json
-
-
-Bash / CMD
-
-npx queuectl enqueue '{"command":"echo Hello from bash"}'
-
-Start / Stop Workers
-npx queuectl worker:start --count 2
-npx queuectl worker:stop
-
-List Jobs (CLI)
-npx queuectl list
-npx queuectl list --state pending
-
-API Examples (Server at http://localhost:3000
-)
-
-List Jobs (JSON)
-
-curl http://localhost:3000/api/jobs | jq .
-
-
-View Dead Letter Queue (DLQ)
-
-curl http://localhost:3000/api/dlq | jq .
-
-
-Retry a Dead Job
-
-curl -X POST http://localhost:3000/api/dlq/retry/<job-id>
-
-Example CLI Output
-✅ Job enqueued: 480aaed7-18ce-413f-b441-45852a73145c
-
-Example Worker Log
-👷 Worker worker-1600000000000-0 started
-Worker worker-1600000000000-0 claimed job: id=480aaed7-... command=echo Hello from bash
-Worker worker-1600000000000-0: spawning job 480aaed7-... => cmd [ '/c', 'echo Hello from bash' ]
-[480aaed7-...] Hello from bash
-
-🏗️ 3) Architecture Overview
-Entry Points
-
-CLI: src/cliCommands.js → uses jobModel.insertJob
-
-HTTP Server: src/index.js → exposes API and starts workers
-
-Persistence
-
-SQLite via better-sqlite3 (src/db.js)
-
-Schema defined in migrations/init.sql
-
-Includes runtime columns: stdout, stderr, exit_code, duration_ms
-
-Job Model (src/jobModel.js)
-
-insertJob(job) — validates and inserts job
-
-claimPendingJob(workerId) — atomically selects & marks job as processing
-
-markCompleted / markFailed — updates job state, retries, DLQ logic
-
-Workers
-
-Implemented in src/worker.js & src/workerManager.js
-
-Continuously claims pending jobs
-
-Executes commands using child_process.spawn
-
-POSIX: direct spawn
-
-Windows: uses cmd /c
-
-Streams stdout/stderr (truncated in DB)
-
-Implements exponential backoff for retries
-Math.pow(base_backoff, attempts)
-
-Moves failed jobs to DLQ after exceeding max_retries
-
-Job Lifecycle
-Insert → pending → claim → processing → completed/failed → retry/pending → dead
-
-⚖️ 4) Assumptions & Trade-Offs
-Aspect	Decision / Limitation
-Database	Single-node SQLite — simple, not distributed
-Command Execution	Direct shell execution (⚠️ untrusted input = risk)
-Retries	Exponential backoff via next_run_at
-Schema Evolution	Manual SQL migration (migrations/init.sql)
-Logging	Basic console logs; structured logging recommended
-🧪 5) Testing Instructions — Quick Verification
-Manual Verification
-
-Start the Server
-
-node src/index.js
-
-
-Enqueue a Job (PowerShell)
-
-$job = @{ command = 'echo test from ps' }
-$job | ConvertTo-Json | Out-File -Encoding UTF8 job.json
-npx queuectl enqueue --file job.json
-Remove-Item job.json
-
-
-Observe Output
-
-Worker claims and executes the job.
-
-Output stored in the database.
-
-Inspect Jobs
-
-curl http://localhost:3000/api/jobs | jq .
-npx queuectl list
-
-Suggested Automated Tests
-Category	Example Tests
-CLI	Parse JSON (inline, file, stdin)
-Job Model	Insert, claim, mark complete/fail
-Worker	Simulate spawn exit codes; verify DB changes
-Integration	End-to-end enqueue → process → complete
-🧰 Troubleshooting & Tips
-
-PowerShell Escaping
-
-Passing JSON inline in PowerShell is error-prone.
-Use ConvertTo-Json + Out-File -Encoding UTF8 with --file.
-
-Missing Columns?
-
-Delete data/queue.db and restart the app.
-It will recreate the DB and reapply migrations.
-
-🌱 Next Steps (Optional Improvements)
-
-Add versioned migrations & CI
-
-Implement unit & integration tests
-
-Integrate structured logging (e.g., pino/winston)
-
-Add metrics & monitoring hooks
-
-Sandbox or validate command execution for safety
