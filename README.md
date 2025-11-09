@@ -80,4 +80,4 @@ MIT License - see LICENSE file for details.
 ## 👨‍💻 Author
 Nayan Kumar Biradar
 📍 IIIT Dharwad, Karnataka
-📧 GitHub Profile
+
