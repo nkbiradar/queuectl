@@ -3,51 +3,81 @@
 ![QueueCTL](https://img.shields.io/badge/QueueCTL-v1.0.0-blue)
 ![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A514-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
 
-A lightweight, persistent job queue system with SQLite backend, built for simplicity and control. Execute shell commands asynchronously with automatic retries, dead letter queue management, and real-time monitoring.
-
-## 📋 Table of Contents
-
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-- [Installation](#-installation)
-- [Usage](#-usage)
-  - [CLI Commands](#cli-commands)
-  - [REST API](#rest-api)
-- [Architecture](#-architecture)
-- [Configuration](#-configuration)
-- [Testing](#-testing)
-- [Troubleshooting](#-troubleshooting)
-- [Development](#-development)
-- [License](#-license)
-
-## ✨ Features
-
-- **📦 Persistent Job Queue** - SQLite-backed storage with ACID properties
-- **🔄 Automatic Retries** - Exponential backoff with configurable retry policies
-- **💀 Dead Letter Queue** - Automatic handling of failed jobs with manual retry capability
-- **🌐 Cross-Platform** - Works on Windows, macOS, and Linux
-- **🔌 REST API** - Full HTTP API for integration and monitoring
-- **📊 Real-time Monitoring** - Track job status, output, and execution metrics
-- **⌨️ Simple CLI** - Intuitive command-line interface for job management
+A lightweight, persistent job queue system with SQLite backend for executing shell commands asynchronously with automatic retries and monitoring.
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- Node.js ≥ 14
-- npm or yarn
-
-### Installation
-
 ```bash
-# Clone the repository
 git clone https://github.com/nkbiradar/queuectl.git
 cd queuectl
-
-# Install dependencies
 npm install
-
-# Start the server (creates database automatically)
 node src/index.js
+
+## Enqueue Jobs
+$job = @{ command = 'echo Hello from PowerShell' }
+$job | ConvertTo-Json | Out-File -Encoding UTF8 job.json
+npx queuectl enqueue --file job.json
+Remove-Item job.json
+
+npx queuectl enqueue '{"command":"echo Hello from bash"}'
+
+## Manage Workers
+
+# Start workers
+npx queuectl worker:start --count 2
+
+# Stop workers  
+npx queuectl worker:stop
+
+# List jobs
+npx queuectl list
+
+## REST API
+
+# List jobs
+curl http://localhost:3000/api/jobs | jq .
+
+# View dead letter queue
+curl http://localhost:3000/api/dlq | jq .
+
+# Retry failed job
+curl -X POST http://localhost:3000/api/dlq/retry/<job-id>
+
+## 🏗️ Architecture
+Database: SQLite with better-sqlite3
+
+CLI: Commander.js
+
+API: Express.js
+
+Workers: Node.js child processes
+
+## Job Lifecycle
+Insert → pending → claim → processing → completed/failed → retry/pending → dead
+
+## ⚙️ Configuration
+
+Setting	Default	Description
+Server Port	3000	HTTP API port
+Worker Count	1	Default workers
+Max Retries	3	Maximum retry attempts
+
+##  Troubleshooting
+rm data/queue.db
+node src/index.js
+
+## PowerShell JSON Issues:
+
+# Use file method instead of inline JSON
+$job | ConvertTo-Json | Out-File -Encoding UTF8 job.json
+npx queuectl enqueue --file job.json
+
+##📄 License
+
+MIT License - see LICENSE file for details.
+
+## 👨‍💻 Author
+Nayan Kumar Biradar
+📍 IIIT Dharwad, Karnataka
+📧 GitHub Profile
