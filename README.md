@@ -1,3 +1,25 @@
+# 🧩 QueueCTL
+
+Lightweight job queue with CLI, worker processes, and a live dashboard backed by SQLite.
+
+[![Watch Demo](https://img.shields.io/badge/▶️%20Watch-Demo-blue)](https://drive.google.com/file/d/1WllnUqcElOoOg79ZZX1TXn8p0AyCN6W6/view?usp=sharing)
+
+---
+
+## 🎥 Demo Video  
+▶️ **Watch the 15-minute full demo here:**  
+[🎬 QueueCTL Demo Video (Google Drive)](https://drive.google.com/file/d/1WllnUqcElOoOg79ZZX1TXn8p0AyCN6W6/view?usp=sharing)
+
+---
+
+## 🚀 Features
+- Enqueue shell commands as jobs  
+- Worker processes handle job execution  
+- Live dashboard for job tracking  
+- Retry logic, backoff, and Dead Letter Queue  
+- Local SQLite database — minimal infrastructure
+
+...
 # QueueCTL - Distributed Job Queue System
 
 ![QueueCTL](https://img.shields.io/badge/QueueCTL-v1.0.0-blue)
