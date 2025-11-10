@@ -12,7 +12,12 @@ Lightweight job queue with CLI, worker processes, and a live dashboard backed by
 
 ---
 
-![QueueCTL Dashboard Screenshot]("C:\Users\HP\Pictures\Screenshots\Screenshot (2242).png")
+## 🖥️ QueueCTL Dashboard Preview
+
+Here’s what the QueueCTL Dashboard looks like while managing jobs and commands:
+
+![QueueCTL Dashboard](./Overview.png)
+
 
 
 ## 🚀 Features
