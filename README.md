@@ -10,6 +10,11 @@ Lightweight job queue with CLI, worker processes, and a live dashboard backed by
 ▶ *Watch the 15-minute full demo here:*  
 [🎬 QueueCTL Demo Video (Google Drive)](https://drive.google.com/file/d/1WllnUqcElOoOg79ZZX1TXn8p0AyCN6W6/view?usp=sharing)
 
+## 🖥️ QueueCTL Dashboard Preview
+
+![QueueCTL Dashboard Screenshot](https://github.com/nkbiradar/queuectl/blob/main/Overview.png)
+
+
 ---
 ## 🚀 Features
 - Enqueue shell commands as jobs  
