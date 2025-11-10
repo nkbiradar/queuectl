@@ -12,6 +12,9 @@ Lightweight job queue with CLI, worker processes, and a live dashboard backed by
 
 ---
 
+![QueueCTL Dashboard Screenshot]("C:\Users\HP\Pictures\Screenshots\Screenshot (2242).png")
+
+
 ## 🚀 Features
 - Enqueue shell commands as jobs  
 - Worker processes handle job execution  
